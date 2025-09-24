@@ -8,7 +8,7 @@ export interface SidebarProps {
 
 export default function Sidebar({ chats, onSelectChat, onNewChat }: SidebarProps) {
   return (
-    <aside className="w-64 bg-gray-900 text-white flex flex-col">
+    <aside className="w-64 bg-blue-900 text-white flex flex-col">
       <div className="p-4 font-bold text-lg border-b border-gray-700 flex justify-between items-center">
         Dilly History
         <button
