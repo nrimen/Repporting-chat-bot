@@ -1,9 +1,13 @@
 "use client";
 
-import { Mic, Square, Send } from "lucide-react";
+import { Mic, Square,  CornerUpLeft } from "lucide-react"; 
 import { useState, useRef } from "react";
 
-export default function ChatInput({ onSend }: { onSend: (msg: string) => void }) {
+export default function ChatInput({
+  onSend,
+}: {
+  onSend: (msg: string) => void;
+}) {
   const [input, setInput] = useState("");
   const [recording, setRecording] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -52,28 +56,49 @@ export default function ChatInput({ onSend }: { onSend: (msg: string) => void })
   };
 
   return (
-    <div className="flex items-center gap-3 w-full md:w-2/3 lg:w-1/2">
-      <input
-        className="flex-1 border text-black rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
-        placeholder="Type your message..."
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && send()}
-      />
-      <button
-        onClick={recording ? stopRecording : startRecording}
-        className={`${
-          recording ? "bg-red-500 hover:bg-red-600" : "bg-green-500 hover:bg-green-600"
-        } text-white p-3 rounded-lg flex items-center justify-center`}
-      >
-        {recording ? <Square size={18} /> : <Mic size={18} />}
-      </button>
-      <button
-        onClick={send}
-        className="bg-blue-500 hover:bg-blue-600 text-white p-3 rounded-lg flex items-center justify-center"
-      >
-        <Send size={18} />
-      </button>
+    <div className="relative w-full max-w-3xl mx-auto p-2 bg-white rounded-2xl shadow-lg border border-gray-200">
+      <div className="flex items-end gap-2">
+        <textarea
+          rows={1}
+          className="flex-1 resize-none text-black rounded-xl px-2 py-2 focus:outline-none placeholder-gray-500 max-h-40 overflow-y-auto"
+          placeholder="Message Dilly..."
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              send();
+            }
+          }}
+        />
+
+        <div className="flex items-center gap-1">
+          <button
+            onClick={recording ? stopRecording : startRecording}
+            className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors duration-150 ${
+              recording
+                ? "bg-red-500 text-white hover:bg-red-600"
+                : "text-gray-600 hover:bg-gray-100"
+            }`}
+            title={recording ? "Stop Recording" : "Start Voice Input"}
+          >
+            {recording ? <Square size={20} /> : <Mic size={20} />}
+          </button>
+
+          <button
+            onClick={send}
+            disabled={!input.trim()}
+            className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors duration-150 ${
+              input.trim()
+                ? "bg-blue-500 text-white hover:bg-blue-600"
+                : "bg-gray-200 text-gray-400 cursor-not-allowed"
+            }`}
+            title="Send Message"
+          >
+            <CornerUpLeft size={20} className="transform rotate-90" />
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
