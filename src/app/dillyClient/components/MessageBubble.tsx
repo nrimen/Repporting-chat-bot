@@ -21,6 +21,7 @@ interface MessageBubbleProps {
   content: string;
   isStreamingAnalysis?: boolean;
   streamingAnalysisText?: string;
+  onSuggestionClick?: (question: string) => void;
 }
 
 interface ChartDataSet {
@@ -41,6 +42,7 @@ interface ParsedResponse {
   table: (string | number)[][];
   graph: Graph[];
   analysis: string;
+  suggestions?: string[];
 }
 
 export default function MessageBubble({
@@ -48,6 +50,7 @@ export default function MessageBubble({
   content,
   isStreamingAnalysis,
   streamingAnalysisText,
+  onSuggestionClick,
 }: MessageBubbleProps) {
   const isUser = role === "user";
   const [parsed, setParsed] = useState<ParsedResponse | null>(null);
@@ -129,6 +132,14 @@ export default function MessageBubble({
       }
     }
   };
+  
+  const handleSuggestionClick = (question: string) => {
+    if (onSuggestionClick) {
+        onSuggestionClick(question);
+    }
+    stopSpeaking();
+    setIsSpeaking(false);
+  };
 
   const renderGraph = (g: Graph, idx: number) => {
     const chartData = g.data.labels.map((label, i) => {
@@ -198,6 +209,7 @@ export default function MessageBubble({
     : parsed?.analysis;
 
   const isAnalysisReady = parsed && !isStreamingAnalysis && parsed.analysis;
+  const hasSuggestions = parsed && parsed.suggestions && parsed.suggestions.length > 0;
 
   return (
     <div className={`flex w-full ${isUser ? "justify-end" : "justify-start"}`}>
@@ -283,6 +295,24 @@ export default function MessageBubble({
                     </button>
                   )}
                 </div>
+                
+                {hasSuggestions && (
+                    <div className="mt-4 pt-3 border-t border-gray-100">
+                        <p className="text-xs font-semibold text-gray-500 mb-2">Suggestions :</p>
+                        <div className="flex flex-wrap gap-2">
+                            {parsed.suggestions!.map((question, i) => (
+                                <button
+                                    key={i}
+                                    onClick={() => handleSuggestionClick(question)}
+                                    className="px-3 py-1 text-sm bg-gray-50 text-gray-700 border border-gray-200 rounded-full hover:bg-gray-100 transition duration-150 ease-in-out text-left"
+                                    title={`Cliquer pour demander: ${question}`}
+                                >
+                                    {question}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
               </div>
             ) : (
               <p className="whitespace-pre-line">{content}</p>

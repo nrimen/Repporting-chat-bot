@@ -1,6 +1,4 @@
-// src/utils/textToSpeech.ts
 const synth = typeof window !== 'undefined' ? window.speechSynthesis : null;
-let utterance: SpeechSynthesisUtterance | null = null;
 let voicesLoaded = false;
 
 const loadVoices = (): Promise<SpeechSynthesisVoice[]> => {
@@ -25,9 +23,7 @@ const loadVoices = (): Promise<SpeechSynthesisVoice[]> => {
 };
 
 const getFrenchVoice = (voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | undefined => {
-    const frenchVoice = voices.find(voice => voice.lang.startsWith('fr'));
-    
-    return frenchVoice; 
+    return voices.find(voice => voice.lang.startsWith('fr')); 
 }
 
 export const speak = async (text: string): Promise<SpeechSynthesisUtterance | null> => {
@@ -36,11 +32,12 @@ export const speak = async (text: string): Promise<SpeechSynthesisUtterance | nu
   stopSpeaking(); 
 
   const voices = await loadVoices(); 
+
   if (synth.pending) {
       await new Promise(r => setTimeout(r, 50));
   }
 
-  utterance = new SpeechSynthesisUtterance(text);
+  const utterance = new SpeechSynthesisUtterance(text);
   
   const voiceToUse = getFrenchVoice(voices);
   

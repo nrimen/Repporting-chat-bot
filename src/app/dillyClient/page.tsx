@@ -4,7 +4,8 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import Sidebar from "./components/Sidebar";
 import MessageBubble from "./components/MessageBubble";
 import ChatInput from "./components/ChatInput";
-import { Menu } from "lucide-react";
+import { Menu, Download } from "lucide-react"; // <-- AJOUT DE DOWNLOAD
+import { downloadReport } from "@/utils/downloadReport"; // <-- AJOUT DE L'UTILITAIRE
 
 interface Message {
   role: "user" | "assistant";
@@ -77,33 +78,24 @@ export default function ChatPage() {
     const data = await res.json();
     const fullResponseText = data.response;
 
-    let fullParsedResponse: { table: any, graph: any, analysis: string } | null = null;
+    let fullParsedResponse: { table: any, graph: any, analysis: string, suggestions?: string[] } | null = null;
     try {
       fullParsedResponse = JSON.parse(fullResponseText);
     } catch (error) {}
 
     if (fullParsedResponse && fullParsedResponse.analysis !== undefined) {
-      const updatedStructuredMessage: Message = { 
-        role: "assistant", 
-        content: fullResponseText, 
-        isStreaming: true, 
-        analysisContent: "" 
-      };
+      const analysisText = fullParsedResponse.analysis || "";
+      let streamedAnalysis = "";
       
       setMessages((prev) => {
         const updated = [...prev];
-        updated[updated.length - 1] = updatedStructuredMessage;
-        setChatHistory((hist) => {
-          const updatedHist = [...hist];
-          updatedHist[currentChatIndex] = updated;
-          return updatedHist;
-        });
+        const lastMsg = updated[updated.length - 1];
+        if (lastMsg.role === "assistant") {
+           lastMsg.content = fullResponseText; 
+        }
         return updated;
       });
 
-      let streamedAnalysis = "";
-      const analysisText = fullParsedResponse.analysis || "";
-      
       for (const char of analysisText) {
         streamedAnalysis += char;
         
@@ -129,6 +121,7 @@ export default function ChatPage() {
         const updated = [...prev];
         const lastMsg = updated[updated.length - 1];
         if (lastMsg.role === "assistant") {
+          lastMsg.content = fullResponseText;
           lastMsg.isStreaming = false;
           lastMsg.analysisContent = analysisText;
         }
@@ -141,9 +134,45 @@ export default function ChatPage() {
         content: fullResponseText, 
         isStreaming: false 
       };
-      updateChatState([...messagesWithUser, finalMessage]);
+      updateChatState([...messagesWithUser.slice(0, messagesWithUser.length - 1), userMessage, finalMessage]);
     }
   }
+
+  const handleSuggestionClick = (question: string) => {
+    sendMessage(question);
+  };
+
+  // --- NOUVELLE LOGIQUE DE TÉLÉCHARGEMENT DU RAPPORT ---
+  async function handleDownloadReport() {
+    if (messages.length === 0) return;
+
+    try {
+      const historyToSend = messages.map(msg => ({
+        role: msg.role,
+        content: msg.content 
+      }));
+
+      const res = await fetch("/api/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ history: historyToSend }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: "Server returned error without JSON body." }));
+        console.error("API Error:", errorData);
+        throw new Error(`Échec de la récupération du rapport. Erreur API: ${errorData.error || res.statusText}`);
+      }
+
+      await downloadReport(res);
+
+    } catch (e) {
+      console.error("Erreur lors du téléchargement du rapport:", e);
+      alert(`Erreur lors de la génération du rapport PDF: ${e instanceof Error ? e.message : 'Unknown error'}`);
+    }
+  }
+  // --- FIN NOUVELLE LOGIQUE ---
+
 
   function selectChat(id: number) {
     if (id !== currentChatIndex) {
@@ -239,6 +268,7 @@ export default function ChatPage() {
                     content={msg.content}
                     isStreamingAnalysis={msg.isStreaming}
                     streamingAnalysisText={msg.analysisContent}
+                    onSuggestionClick={handleSuggestionClick}
                   />
                 ))}
               </div>
@@ -255,7 +285,24 @@ export default function ChatPage() {
                 }px)`,
               }}
             >
-              <ChatInput onSend={sendMessage} />
+              <div className="flex items-end gap-3 w-full max-w-3xl mx-auto">
+                <ChatInput onSend={sendMessage} />
+                
+                <button
+                  onClick={handleDownloadReport}
+                  disabled={messages.length === 0}
+                  className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center transition-colors duration-150 shadow-md ${
+                    messages.length > 0
+                      ? "bg-white text-gray-700 hover:bg-gray-100"
+                      : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                  }`}
+                  title="Télécharger le rapport de la discussion"
+                >
+                  <Download size={24} />
+                </button>
+
+              </div>
+              
               <p className="absolute bottom-1 right-1/2 translate-x-1/2 text-xs text-gray-400 mt-2">
                 Dilly may display inaccurate info, including about people, so
                 double-check its responses.
